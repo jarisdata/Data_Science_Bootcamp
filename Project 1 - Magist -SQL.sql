@@ -1,3 +1,6 @@
+-- PROJECT 1 (Magist): ANSWERING BUSINESS QUESTIONS WITH TABLEAU (see. project description for more details)
+
+
 -- 1. How many orders are there in the dataset (i.e. orders table)?
 SELECT *
 FROM orders;

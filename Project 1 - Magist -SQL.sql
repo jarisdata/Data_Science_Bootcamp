@@ -9,15 +9,26 @@ SELECT COUNT(*) as 'Total number of orders'
 FROM orders;
 
 -- 2. Are orders actually delivered (i.e. order_status)?
-# With a delivery rate above 97%, 1.74% active orders (i.e. approved, created, processing, invoiced, shipped), and 1.2% of orders cancelled or unavailable, delivery appears to be generally reliable. 
+# With a delivery rate above 98,7% of active or delivered orders (i.e. approved, created, processing, invoiced, shipped), and 1.2% of orders cancelled or unavailable, delivery appears to be generally reliable. 
 
 SELECT order_status, COUNT(order_status) as 'Total number' 
 FROM orders
+WHERE order_status IN ('delivered', 'shipped', 'invoiced', 'processing', 'created', 'approved')
 GROUP BY order_status
 ORDER BY COUNT(order_status) DESC;
 
+WITH deliveries as (
+SELECT COUNT(*) as delivered_orders
+,(SELECT COUNT(*) FROM orders) as total_orders
+FROM orders
+WHERE order_status IN ('delivered', 'shipped', 'invoiced', 'processing', 'created', 'approved')
+) 
+SELECT ((100/total_orders)*delivered_orders) as 'Ratio'
+FROM deliveries
+;
 
---  3) Is Magist having user growth?: number of orders grouped by year and month. 
+
+--  3) Is Magist experiencing user growth? Number of orders grouped by year and month. 
 -- 	With an average monthly order growth of 23% Magist experienced a strong year in 2017. 
 -- In 2018, however, order growth was stagnant at 2% up until August and then broke down almost entirely in September and October
 
@@ -53,7 +64,9 @@ ORDER BY COUNT(DISTINCT(product_id)) DESC;
 
 SELECT pcnt.product_category_name_english AS 'Product_Category'
 	, COUNT(oi.order_id) AS 'Items_ordered'
-    , ROUND((100/112101)*COUNT(oi.order_id), 2) AS 'Percentage_Share'
+    , ROUND((100/      
+    (SELECT COUNT(*) from order_items) -- WHERE order_status IN ('delivered', 'shipped', 'invoiced', 'processing', 'created', 'approved'))
+     )*COUNT(oi.order_id), 2) AS 'Percentage_Share'
  --   , (SELECT COUNT(*) FROM order_items) as 'All_items_ordered' 
  --   , ((100/All_items_ordered)*Items_ordered) as 'Percentage_share'
 FROM orders as o
@@ -82,15 +95,15 @@ LIMIT 20;
 
 -- This table is good to understand the price-category distribution of tech goods. Uncomment the second condition of the WHERE statement to see tech in relation to the whole market
 SELECT 
-	pcnt.product_category_name_english AS 'Product Category', -- Use the english translation of the product category
-	CASE													  -- Subdivides the selection in price categories
-		-- WHEN oi.price <= 50 THEN 'Low'
-        -- WHEN oi.price <= 100 THEN 'Lower medium'
-        WHEN oi.price <= 250 THEN 'Low'
-        WHEN oi.price <= 750 THEN 'Medium'
-        WHEN oi.price > 750 THEN 'High'
-        ELSE 'Unknown'
-	END AS 'Price category'   
+	pcnt.product_category_name_english AS 'Product Category' -- Use the english translation of the product category
+-- 	,CASE													  -- Subdivides the selection in price categories
+-- 		-- WHEN oi.price <= 50 THEN 'Low'
+--         -- WHEN oi.price <= 100 THEN 'Lower medium'
+--         WHEN oi.price <= 250 THEN 'Low'
+--         WHEN oi.price <= 750 THEN 'Medium'
+--         WHEN oi.price > 750 THEN 'High'
+--         ELSE 'Unknown'
+-- 	END AS 'Price category'   
     , COUNT(oi.order_id) AS 'Items ordered' 					  -- Counts individual items ordered
     , ROUND((100/112101)*COUNT(oi.order_id), 2) AS 'Percentage_Share'
 	, ROUND(AVG(oi.price), 0) AS 'Average price'				  -- Calculates the average price
@@ -103,9 +116,11 @@ JOIN product_category_name_translation as pcnt
 	ON p.product_category_name = pcnt.product_category_name
 WHERE o.order_status 										-- ensures that item was actually part of a transaction and is a tech product
 	IN ('delivered', 'shipped', 'invoiced', 'processing', 'created', 'approved') 
-AND pcnt.product_category_name_english IN ('audio', 'cine_photo', 'computers_accessories', 'consoles_games', 'electronics', 'cds_dvds_musicals', 'dvds_blu_ray', 'pc_gamer', 'telephony', 'tablets_printing_image', 'fixed_telephony')
-GROUP BY 1, 2 												-- groups by product and price category
-ORDER BY 4 DESC;											-- orders by the number of items sold
+-- AND pcnt.product_category_name_english IN ('audio', 'cine_photo', 'computers_accessories', 'consoles_games', 'electronics', 'cds_dvds_musicals', 'dvds_blu_ray', 'pc_gamer', 'telephony', 'tablets_printing_image', 'fixed_telephony')
+GROUP BY 1												-- groups by product and price category
+ORDER BY 2 DESC
+LIMIT 20
+;											-- orders by the number of items sold
 
 
 SELECT 
